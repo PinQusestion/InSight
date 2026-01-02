@@ -7,7 +7,7 @@ const session = require("express-session")
 const app = express()
 
 const authRoutes = require("./routes/auth.routes")
-const mailRoutes = require("./routes/mail.routes")
+const emailRoutes = require("./routes/email.routes")
 require("./config/passport")(passport) // Configuring passport
 
 
@@ -28,7 +28,7 @@ app.use(passport.initialize())
 app.use(passport.session())
 
 app.use("/auth", authRoutes)
-app.use("/mail", mailRoutes)
+app.use("/email", emailRoutes)
 
 app.get("/", (req,res) => {
     res.send("Welcome to InSight")
