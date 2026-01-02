@@ -82,7 +82,7 @@ export default function Features() {
               {/* Icon */}
               <motion.div
                 whileHover={{ rotate: 5, scale: 1.1 }}
-                className="w-14 h-14 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-xl flex items-center justify-center mb-6 border border-cyan-500/20"
+                className="w-14 h-14 bg-linear-to-br from-cyan-500/20 to-blue-500/20 rounded-xl flex items-center justify-center mb-6 border border-cyan-500/20"
               >
                 <feature.icon className="w-7 h-7 text-cyan-400" />
               </motion.div>

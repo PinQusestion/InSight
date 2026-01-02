@@ -7,7 +7,7 @@ import Footer from './components/Footer';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#08080c]">
+    <>
       <NavBar />
       <main>
         <Hero />
@@ -16,6 +16,6 @@ export default function Home() {
         <CTASection />
       </main>
       <Footer />
-    </div>
+    </>
   );
 }

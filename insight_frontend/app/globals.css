@@ -1,44 +1,122 @@
 @import "tailwindcss";
 
-:root {
-  --background: #08080c;
-  --foreground: #ededed;
-  --cyan: #00d4ff;
-  --cyan-dark: #00a8cc;
+@layer base {
+  :root {
+    --background: #08080c;
+    --foreground: #ededed;
+    --cyan: #00d4ff;
+    --cyan-dark: #00a8cc;
+  }
+
+  html, body {
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@layer components {
+  /* Gradient text animation */
+  .gradient-text {
+    background: linear-gradient(90deg, #00d4ff, #00f5d4, #00d4ff);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradient-shift 3s ease-in-out infinite;
+  }
+
+  /* Glowing button effect */
+  .glow-button {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .glow-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+  }
+
+  .glow-button:hover::before {
+    left: 100%;
+  }
+
+  .glow-button:hover {
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+    transform: translateY(-2px);
+  }
+
+  /* Browser mockup styles */
+  .browser-mockup {
+    background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Card hover effect */
+  .card-hover {
+    transition: all 0.3s ease;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 40px rgba(0, 212, 255, 0.1);
+  }
+
+  /* Subtle background gradient */
+  .bg-gradient-radial {
+    background: radial-gradient(ellipse at top, rgba(0, 212, 255, 0.1) 0%, transparent 50%);
+  }
+
+  /* Floating animation */
+  .float-animation {
+    animation: float 4s ease-in-out infinite;
+  }
+
+  /* Pulse animation for badges */
+  .pulse-badge {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+@layer utilities {
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
 
-html {
-  scroll-behavior: smooth;
-}
+  ::-webkit-scrollbar-track {
+    background: #08080c;
+  }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  overflow-x: hidden;
-}
+  ::-webkit-scrollbar-thumb {
+    background: #1a1a2e;
+    border-radius: 4px;
+  }
 
-/* Gradient text animation */
-.gradient-text {
-  background: linear-gradient(90deg, #00d4ff, #00f5d4, #00d4ff);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: gradient-shift 3s ease-in-out infinite;
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2a2a4e;
+  }
 }
 
 @keyframes gradient-shift {
@@ -50,34 +128,6 @@ body {
   }
 }
 
-/* Glowing button effect */
-.glow-button {
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.glow-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  transition: left 0.5s ease;
-}
-
-.glow-button:hover::before {
-  left: 100%;
-}
-
-.glow-button:hover {
-  box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
-  transform: translateY(-2px);
-}
-
-/* Floating animation */
 @keyframes float {
   0%, 100% {
     transform: translateY(0px);
@@ -87,11 +137,6 @@ body {
   }
 }
 
-.float-animation {
-  animation: float 4s ease-in-out infinite;
-}
-
-/* Pulse animation for badges */
 @keyframes pulse-glow {
   0%, 100% {
     box-shadow: 0 0 5px rgba(0, 212, 255, 0.3);
@@ -99,47 +144,4 @@ body {
   50% {
     box-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
   }
-}
-
-.pulse-badge {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-/* Browser mockup styles */
-.browser-mockup {
-  background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Card hover effect */
-.card-hover {
-  transition: all 0.3s ease;
-}
-
-.card-hover:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 40px rgba(0, 212, 255, 0.1);
-}
-
-/* Subtle background gradient */
-.bg-gradient-radial {
-  background: radial-gradient(ellipse at top, rgba(0, 212, 255, 0.1) 0%, transparent 50%);
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #08080c;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #1a1a2e;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #2a2a4e;
 }

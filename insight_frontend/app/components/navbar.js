@@ -30,7 +30,7 @@ export default function NavBar() {
           whileHover={{ scale: 1.05 }}
           transition={{ type: "spring", stiffness: 400 }}
         >
-          <div className="w-9 h-9 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-lg flex items-center justify-center">
+          <div className="w-9 h-9 bg-linear-to-br from-cyan-400 to-cyan-600 rounded-lg flex items-center justify-center">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <span className="text-xl font-semibold text-white">inSight</span>

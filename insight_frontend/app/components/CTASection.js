@@ -89,7 +89,7 @@ export default function CTASection() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={isLoading || isSubmitted}
-            className="glow-button flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-cyan-500 to-cyan-400 text-black font-semibold rounded-xl disabled:opacity-70 disabled:cursor-not-allowed min-w-[150px]"
+            className="glow-button flex items-center justify-center gap-2 px-6 py-4 bg-linear-to-r from-cyan-500 to-cyan-400 text-black font-semibold rounded-xl disabled:opacity-70 disabled:cursor-not-allowed min-w-[150px]"
           >
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />

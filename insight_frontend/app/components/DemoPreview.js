@@ -55,13 +55,7 @@ export default function DemoPreview() {
 
   return (
     <section className="relative py-20 px-6">
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.8 }}
-        className="max-w-4xl mx-auto"
-      >
+      <div className="max-w-4xl mx-auto">
         {/* Browser Mockup */}
         <div className="browser-mockup rounded-2xl overflow-hidden shadow-2xl shadow-black/50 float-animation">
           {/* Browser Header */}
@@ -86,7 +80,7 @@ export default function DemoPreview() {
               transition={{ duration: 0.5 }}
               className="flex items-center gap-3 mb-6"
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-linear-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center">
                 <Zap className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -108,7 +102,7 @@ export default function DemoPreview() {
                   key={index}
                   variants={itemVariants}
                   whileHover={{ scale: 1.02, backgroundColor: "rgba(255,255,255,0.03)" }}
-                  className="p-4 rounded-xl bg-white/[0.02] border border-white/5 transition-all duration-300 cursor-pointer"
+                  className="p-4 rounded-xl bg-white/2 border border-white/5 transition-all duration-300 cursor-pointer"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
@@ -129,7 +123,7 @@ export default function DemoPreview() {
             </motion.div>
           </div>
         </div>
-      </motion.div>
+      </div>
     </section>
   );
 }
