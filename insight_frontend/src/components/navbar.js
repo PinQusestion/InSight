@@ -14,6 +14,10 @@ export default function NavBar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const handleLogin = () => {
+    console.log("Login button clicked");
+  }
+
   return (
     <motion.nav
       initial={{ y: -100 }}
@@ -59,6 +63,7 @@ export default function NavBar() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => {handleLogin()}}
             className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors duration-200 hidden sm:block"
           >
             Sign in

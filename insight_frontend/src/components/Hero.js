@@ -23,6 +23,10 @@ export default function Hero() {
     }
   };
 
+  const handleLogin = () => {
+    console.log("Login button clicked");
+  }
+
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-24 pb-12 overflow-hidden">
       {/* Background gradient */}
@@ -95,6 +99,7 @@ export default function Hero() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => {handleLogin()}}
             className="glow-button flex items-center gap-2 px-8 py-4 bg-linear-to-r from-cyan-500 to-cyan-400 text-black font-semibold rounded-xl"
           >
             <Mail className="w-5 h-5" />
