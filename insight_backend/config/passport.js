@@ -49,10 +49,10 @@ function configurePassport(passport) {
             const user = await User.findById(id);
             done(null, user);
         } catch (err) {
+            console.error("Deserialization error:", err);
             done(err, null);
         }
-    }
-    )
+    })
 }
 
 module.exports = configurePassport;

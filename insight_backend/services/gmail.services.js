@@ -8,7 +8,7 @@ const model = genAI.getGenerativeModel({
 });
 
 // Helper to create the OAuth2 Client
-const createOAuthClient = (accessToken, refreshToken) => {
+const createOAuthClient = (accessToken, refreshToken, userId) => {
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
@@ -26,7 +26,7 @@ const createOAuthClient = (accessToken, refreshToken) => {
       
       if (tokens.refresh_token) updateData.refreshToken = tokens.refresh_token;
 
-      if (Object.keys(updateData).length > 0) {
+      if (Object.keys(updateData).length > 0 && userId) {
         await User.findByIdAndUpdate(userId, updateData);
         console.log(`Database updated with refreshed tokens for user: ${userId}`);
       }
@@ -39,8 +39,8 @@ const createOAuthClient = (accessToken, refreshToken) => {
 };
 
 // fetching emails
-async function fetchRecentEmails(accessToken, refreshToken, limit = 10) {
-  const auth = createOAuthClient(accessToken, refreshToken);
+async function fetchRecentEmails(accessToken, refreshToken, userId, limit = 10) {
+  const auth = createOAuthClient(accessToken, refreshToken, userId);
   const gmail = google.gmail({ version: "v1", auth });
 
   const response = await gmail.users.messages.list({
@@ -79,7 +79,6 @@ async function fetchRecentEmails(accessToken, refreshToken, limit = 10) {
       });
 
       const aiData = JSON.parse(result.response.text());
-      // --- AI Logic Ends Here ---q
 
       return {
         id: msg.id,
@@ -92,8 +91,8 @@ async function fetchRecentEmails(accessToken, refreshToken, limit = 10) {
 }
 
 // fetching subscriptions
-async function fetchSubscriptions(accessToken, refreshToken) {
-  const auth = createOAuthClient(accessToken, refreshToken);
+async function fetchSubscriptions(accessToken, refreshToken, userId) {
+  const auth = createOAuthClient(accessToken, refreshToken, userId);
   const gmail = google.gmail({ version: "v1", auth });
   const subscriptionsMap = new Map();
 
@@ -135,8 +134,8 @@ async function fetchSubscriptions(accessToken, refreshToken) {
 }
 
 // moving the subscriber emails to trash
-async function trashAllFromSender(accessToken, refreshToken, senderEmail){
-  const auth = createOAuthClient(accessToken, refreshToken);
+async function trashAllFromSender(accessToken, refreshToken, userId, senderEmail){
+  const auth = createOAuthClient(accessToken, refreshToken, userId);
   const gmail = google.gmail({ version: 'v1', auth });
 
   // 1. Search for all emails from this specific sender
