@@ -18,7 +18,7 @@ app.use(express.json())
 // CORS Configuration
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL_PROD 
+    ? process.env.FRONTEND_URL_PROD
     : process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -50,19 +50,20 @@ app.get("/", (req,res) => {
     res.send("Welcome to InSight")
 });
 
-app.get("/dashboard", (req,res) => {
-    res.send("Welcome to your Dashboard")
-});
-
+// Profile endpoint - checks if user is authenticated
 app.get("/profile", (req, res) => {
-    if (req.isAuthenticated()) {
-        res.json({
-            message: "You are logged in!",
-            user: req.user 
-        });
-    } else {
-        res.status(401).json({ message: "Not logged in" });
-    }
+  if (req.isAuthenticated()) {
+    return res.json({
+      user: {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        googleId: req.user.googleId
+      }
+    });
+  } else {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
 });
 
 
