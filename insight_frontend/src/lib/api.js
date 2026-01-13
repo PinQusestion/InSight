@@ -75,6 +75,23 @@ async function logout() {
   return response.json();
 }
 
+async function fetchEmails(){
+    const reposponce = await fetch(`${API}/email/emails`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        credentials: "include",
+    });
+
+    if (!reposponce.ok) {
+        const error = await reposponce.json();
+        return { error: error.message || "Failed to fetch emails" };
+    }
+
+    return reposponce.json();
+}
+
 async function fetchEmailSummary() {
   const response = await fetch(`${API}/email/summary`, {
     method: "GET",

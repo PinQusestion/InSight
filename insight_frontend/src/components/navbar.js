@@ -1,10 +1,14 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, LogOut, LayoutDashboard } from 'lucide-react';
+import Link from 'next/link';
+import { checkAuth, logout } from '../lib/api.js';
 
 export default function NavBar() {
   const [scrolled, setScrolled] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -14,9 +18,31 @@ export default function NavBar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleLogin = () => {
-    console.log("Login button clicked");
-  }
+  useEffect(() => {
+    const checkUserAuth = async () => {
+      try {
+        const userData = await checkAuth();
+        setUser(userData?.user || null);
+      } catch (error) {
+        console.error("Failed to check auth:", error);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkUserAuth();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setUser(null);
+      window.location.href = '/';
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   return (
     <motion.nav
@@ -60,21 +86,48 @@ export default function NavBar() {
 
         {/* CTA Buttons */}
         <div className="flex items-center gap-3">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {handleLogin()}}
-            className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors duration-200 hidden sm:block"
-          >
-            Sign in
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="px-4 py-2 text-sm font-medium text-cyan-400 border border-cyan-400/50 rounded-lg hover:bg-cyan-400/10 transition-all duration-200"
-          >
-            Get Early Access
-          </motion.button>
+          {!loading && user ? (
+            <>
+              <Link href="/dashboard">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors duration-200 hidden sm:flex items-center gap-2 cursor-pointer"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </motion.div>
+              </Link>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleLogout}
+                className="px-4 py-2 text-sm font-medium text-red-400 border border-red-400/50 rounded-lg hover:bg-red-400/10 transition-all duration-200 flex items-center gap-2 cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </motion.button>
+            </>
+          ) : (
+            <>
+              <Link href="/login">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors duration-200 hidden sm:block cursor-pointer"
+                >
+                  Sign in
+                </motion.div>
+              </Link>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="px-4 py-2 text-sm font-medium text-cyan-400 border border-cyan-400/50 rounded-lg hover:bg-cyan-400/10 transition-all duration-200 cursor-pointer"
+              >
+                Get Early Access
+              </motion.button>
+            </>
+          )}
         </div>
       </div>
     </motion.nav>
