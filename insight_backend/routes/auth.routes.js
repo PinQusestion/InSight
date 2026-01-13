@@ -18,8 +18,7 @@ authRoutes.get("/google", passport.authenticate("google", {
 authRoutes.get("/google/callback", 
     passport.authenticate("google", { failureRedirect: "/auth/google/failure" }),
     (req, res) => {
-        // Successful authentication, redirect home.
-        res.redirect("http://localhost:5001/profile");
+        res.redirect("http://localhost:3000/dashboard");
     }
 );
 
@@ -31,7 +30,7 @@ authRoutes.get("/google/failure", (req, res) => {
 authRoutes.get('/logout', (req, res, next) => {
   req.logout((err) => {
     if (err) return next(err);
-    res.redirect('http://localhost:3000');
+    res.redirect('http://localhost:3000/login');
   });
 });
 
