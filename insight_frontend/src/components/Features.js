@@ -72,7 +72,7 @@ export default function Features() {
               key={index}
               variants={itemVariants}
               whileHover={{ y: -10 }}
-              className="card-hover relative p-8 rounded-2xl bg-gradient-to-b from-white/[0.05] to-transparent border border-white/10 group"
+              className="card-hover relative p-8 rounded-2xl bg-linear-to-b from-white/5 to-transparent border border-white/10 group"
             >
               {/* Step Number */}
               <div className="absolute top-4 right-4 text-5xl font-bold text-white/5 group-hover:text-cyan-500/10 transition-colors duration-300">

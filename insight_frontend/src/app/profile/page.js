@@ -7,6 +7,18 @@ import Footer from "../../components/Footer.js";
 import { fetchEmailSummary, checkAuth, logout } from "../../lib/api.js";
 import { useRouter } from "next/navigation";
 
+// Mock summary generator (temporary until Gemini API quota is restored)
+const generateMockSummary = (index) => {
+  const summaries = [
+    "🔴 Action Required: Review and approve the Q4 budget proposal by Friday. Financial impact: $50K.",
+    "📊 Report: Monthly analytics show 25% increase in user engagement. Key metric: DAU up 12%.",
+    "💼 Meeting: Team standup at 2 PM. Discuss Q1 roadmap and sprint planning priorities.",
+    "🎯 Notification: Your subscription renewal is due. Current plan includes 100 emails/day limit.",
+    "⏰ Reminder: Quarterly review meeting scheduled for tomorrow at 10 AM. Please prepare feedback.",
+  ];
+  return summaries[index % summaries.length];
+};
+
 export default function ProfilePage() {
     const router = useRouter();
     const [emails, setEmails] = useState([]);
@@ -44,8 +56,12 @@ export default function ProfilePage() {
                 if (emailData.error) {
                     setError(emailData.error);
                 } else {
-                    // Get last 5 emails
-                    setEmails(Array.isArray(emailData) ? emailData.slice(0, 5) : []);
+                    // Get last 5 emails with mock summaries
+                    const mockEmails = Array.isArray(emailData) ? emailData.slice(0, 5).map((email, idx) => ({
+                        ...email,
+                        aiSummary: generateMockSummary(idx)
+                    })) : [];
+                    setEmails(mockEmails);
                 }
             } catch (err) {
                 setError("Failed to load emails");
@@ -199,7 +215,7 @@ export default function ProfilePage() {
                             <div className="grid gap-6 md:grid-cols-3 mb-8">
                                 {/* Name Card */}
                                 <motion.div variants={itemVariants} className="group">
-                                    <div className="relative p-6 rounded-xl bg-gradient-to-br from-cyan-500/10 to-transparent border border-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300">
+                                    <div className="relative p-6 rounded-xl bg-linear-to-br from-cyan-500/10 to-transparent border border-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-full bg-cyan-500/20 flex items-center justify-center">
                                                 <span className="text-2xl font-bold text-cyan-400">{user.name.charAt(0).toUpperCase()}</span>
@@ -214,7 +230,7 @@ export default function ProfilePage() {
 
                                 {/* Email Card */}
                                 <motion.div variants={itemVariants} className="group">
-                                    <div className="relative p-6 rounded-xl bg-gradient-to-br from-purple-500/10 to-transparent border border-purple-500/20 hover:border-purple-500/50 transition-all duration-300">
+                                    <div className="relative p-6 rounded-xl bg-linear-to-brrom-purple-500/10 to-transparent border border-purple-500/20 hover:border-purple-500/50 transition-all duration-300">
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-xs text-gray-400 uppercase tracking-wider">Email Address</p>
@@ -224,7 +240,7 @@ export default function ProfilePage() {
                                                 whileHover={{ scale: 1.1 }}
                                                 whileTap={{ scale: 0.95 }}
                                                 onClick={() => copyToClipboard(user.email)}
-                                                className="flex-shrink-0 p-2 text-purple-400 hover:text-purple-300 transition-colors"
+                                                className="shrink-0 p-2 text-purple-400 hover:text-purple-300 transition-colors"
                                             >
                                                 {copiedEmail ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                                             </motion.button>
@@ -234,7 +250,7 @@ export default function ProfilePage() {
 
                                 {/* Account Status Card */}
                                 <motion.div variants={itemVariants} className="group">
-                                    <div className="relative p-6 rounded-xl bg-gradient-to-br from-green-500/10 to-transparent border border-green-500/20 hover:border-green-500/50 transition-all duration-300">
+                                    <div className="relative p-6 rounded-xl bg-linear-to-br from-green-500/10 to-transparent border border-green-500/20 hover:border-green-500/50 transition-all duration-300">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
                                                 <div className="w-2 h-2 bg-green-400 rounded-full" />
@@ -260,7 +276,7 @@ export default function ProfilePage() {
                 >
                     <div className="max-w-7xl mx-auto">
                         <motion.div variants={itemVariants} className="group">
-                            <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-white/5 to-transparent border border-white/10">
+                            <div className="relative rounded-2xl overflow-hidden bg-linear-to-br from-white/5 to-transparent border border-white/10">
                                 {/* Header */}
                                 <div className="px-8 py-6 border-b border-white/10">
                                     <div className="flex items-center justify-between gap-4">
@@ -325,7 +341,7 @@ export default function ProfilePage() {
                                                     className="p-5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-cyan-500/30 transition-all duration-200 cursor-pointer group"
                                                 >
                                                     <div className="flex items-start gap-4">
-                                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center flex-shrink-0">
+                                                        <div className="w-12 h-12 rounded-full bg-linear-to-br from-cyan-400 to-blue-500 flex items-center justify-center shrink-0">
                                                             <span className="text-sm font-bold text-white">
                                                                 {(email.from?.charAt(0) || 'M').toUpperCase()}
                                                             </span>

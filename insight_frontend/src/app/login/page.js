@@ -54,7 +54,7 @@ export default function LoginPage() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 w-fit group">
           <motion.div 
-            className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-lg flex items-center justify-center group-hover:shadow-lg group-hover:shadow-cyan-500/50 transition-all"
+            className="w-12 h-12 bg-linear-to-brrom-cyan-400 to-cyan-600 rounded-lg flex items-center justify-center group-hover:shadow-lg group-hover:shadow-cyan-500/50 transition-all"
             whileHover={{ scale: 1.1 }}
           >
             <Mail className="w-6 h-6 text-white" />
@@ -95,7 +95,7 @@ export default function LoginPage() {
               "Privacy-first – no email storage"
             ].map((feature, idx) => (
               <div key={idx} className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
+                <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center shrink-0">
                   <Check className="w-4 h-4 text-cyan-400" />
                 </div>
                 <p className="text-gray-300 text-lg">{feature}</p>

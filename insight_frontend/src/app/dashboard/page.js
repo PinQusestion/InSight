@@ -1,88 +1,137 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Mail,
-  FileText,
-  Zap,
-  TrendingUp,
-  AlertCircle,
+  Clock,
+  BarChart3,
   Menu,
   X,
   LogOut,
   User,
   Settings,
+  Search,
+  Bell,
+  ChevronDown,
+  Inbox,
+  Lightbulb,
+  AlertCircle,
   Trash2,
   Loader,
 } from "lucide-react";
 import Link from "next/link";
-import Footer from "../../components/Footer.js";
 import {
   fetchEmailSummary,
   fetchSubscriptions,
   syncEmails,
   unsubscribeFromSender,
+  checkAuth,
+  logout,
 } from "../../lib/api.js";
 
+// Mock summary generator (temporary until Gemini API quota is restored)
+const generateMockSummary = (index) => {
+  const summaries = [
+    "🔴 Action Required: Review and approve the Q4 budget proposal by Friday. Financial impact: $50K.",
+    "📊 Report: Monthly analytics show 25% increase in user engagement. Key metric: DAU up 12%.",
+    "💼 Meeting: Team standup at 2 PM. Discuss Q1 roadmap and sprint planning priorities.",
+    "🎯 Notification: Your subscription renewal is due. Current plan includes 100 emails/day limit.",
+    "⏰ Reminder: Quarterly review meeting scheduled for tomorrow at 10 AM. Please prepare feedback.",
+  ];
+  return summaries[index % summaries.length];
+};
+
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState("overview");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [emails, setEmails] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
+  const [expandedBriefing, setExpandedBriefing] = useState(0);
+  const [showSubscriptions, setShowSubscriptions] = useState(false);
   const [unsubscribingEmail, setUnsubscribingEmail] = useState(null);
-  const [unsubscribeSuccess, setUnsubscribeSuccess] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Fetch emails on component mount
-//   useEffect(() => {
-//     const loadEmails = async () => {
-//       try {
-//         setLoading(true);
-//         const emailData = await fetchEmailSummary();
-//         if (emailData.error) {
-//           setError(emailData.error);
-//         } else {
-//           setEmails(emailData);
-//         }
-//       } catch (err) {
-//         setError("Failed to load emails");
-//         console.error(err);
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-
-//     loadEmails();
-//   }, []);
-
-  // Fetch subscriptions
   useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const userData = await checkAuth();
+        if (!userData || !userData.user) {
+          router.push("/login");
+          return;
+        }
+        setUser(userData.user);
+        setIsAuthenticated(true);
+      } catch (err) {
+        console.error("Auth check failed:", err);
+        router.push("/login");
+      }
+    };
+    checkUser();
+  }, [router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const loadEmails = async () => {
+      try {
+        setLoading(true);
+        const emailData = await fetchEmailSummary();
+        if (emailData?.error) {
+          setError(emailData.error);
+          if (emailData.error.includes("Not authenticated")) {
+            router.push("/login");
+          }
+        } else {
+          // Add mock summaries to emails
+          const emailsWithMocks = (emailData || []).map((email, idx) => ({
+            ...email,
+            aiSummary: generateMockSummary(idx)
+          }));
+          setEmails(emailsWithMocks);
+        }
+      } catch (err) {
+        console.error("Failed to load emails:", err);
+        setError("Failed to load emails");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadEmails();
+  }, [isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
     const loadSubscriptions = async () => {
       try {
         const subData = await fetchSubscriptions();
-        if (subData.error) {
-          console.error(subData.error);
+        if (subData?.error) {
+          console.error("Failed to load subscriptions:", subData.error);
+          if (subData.error.includes("Not authenticated")) {
+            router.push("/login");
+          }
         } else {
-          setSubscriptions(subData);
+          setSubscriptions(subData || []);
         }
       } catch (err) {
-        console.error("Failed to load subscriptions", err);
+        console.error("Failed to load subscriptions:", err);
       }
     };
-
     loadSubscriptions();
-  }, []);
+  }, [isAuthenticated, router]);
 
-  // Handle sync button
   const handleSync = async () => {
     try {
       setLoading(true);
       const emailData = await syncEmails();
-      if (emailData.error) {
+      if (emailData?.error) {
         setError(emailData.error);
       } else {
-        setEmails(emailData);
+        setEmails(emailData || []);
         setError(null);
       }
     } catch (err) {
@@ -93,20 +142,25 @@ export default function DashboardPage() {
     }
   };
 
-  // Handle unsubscribe
+  const handleLogout = async () => {
+    try {
+      await logout();
+      window.location.href = "/login";
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
+
   const handleUnsubscribe = async (senderEmail) => {
     try {
       setUnsubscribingEmail(senderEmail);
       const result = await unsubscribeFromSender(senderEmail);
-      if (result.error) {
+      if (result?.error) {
         setError(result.error);
       } else {
-        // Remove from subscriptions list
-        setSubscriptions(
-          subscriptions.filter((sub) => sub.email !== senderEmail)
-        );
-        setUnsubscribeSuccess(senderEmail);
-        setTimeout(() => setUnsubscribeSuccess(null), 3000);
+        // Remove the subscription from the list
+        setSubscriptions(subscriptions.filter((sub) => sub.email !== senderEmail));
+        setError(null);
       }
     } catch (err) {
       setError("Failed to unsubscribe");
@@ -116,498 +170,683 @@ export default function DashboardPage() {
     }
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
-  };
+  const sidebarLinks = [
+    { icon: BarChart3, label: "Dashboard", active: true },
+    { icon: Inbox, label: "Inbox", active: false },
+    { icon: Lightbulb, label: "Insights", active: false },
+    { icon: User, label: "Profile", href: "/profile", active: false },
+    { icon: Mail, label: "Subscriptions", onClick: () => setShowSubscriptions(!showSubscriptions), active: false },
+  ];
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5 },
-    },
+  // Calculate stats from email data
+  const emailCount = emails.length;
+  const urgentCount = subscriptions.length;
+  const timeSavedPerEmail = 2; // minutes
+  const totalTimeSaved = emailCount * timeSavedPerEmail;
+  
+  // Email categories calculation
+  const emailCategories = {
+    newsletters: Math.round((emails.filter(e => e.category === 'newsletter').length / emailCount) * 100) || 12,
+    work: Math.round((emails.filter(e => e.category === 'work').length / emailCount) * 100) || 28,
+    personal: Math.round((emails.filter(e => e.category === 'personal').length / emailCount) * 100) || 20,
+    financial: Math.round((emails.filter(e => e.category === 'financial').length / emailCount) * 100) || 12,
+    other: Math.round((emails.filter(e => e.category === 'other').length / emailCount) * 100) || 5,
   };
+  
+  // Productivity score based on emails processed
+  const baseProductivity = 70;
+  const productivityBoost = Math.min(emailCount * 2, 24);
+  const productivity = Math.min(baseProductivity + productivityBoost, 100);
+
+  const briefings = [
+    {
+      title: "Today's Briefing",
+      date: "January 13, 2026",
+      time: "9:00 AM",
+      count: emailCount || 0,
+      tag: "Latest",
+      color: "from-cyan-400 to-cyan-600",
+    },
+    {
+      title: "Yesterday's Briefing",
+      date: "January 12, 2026",
+      time: "9:00 AM",
+      count: Math.max(emailCount - 5, 0),
+      color: "from-cyan-500 to-cyan-700",
+    },
+  ];
+
+  const actionItems = subscriptions.slice(0, 4).map((sub, idx) => ({
+    icon: idx < 2 ? "🔴" : "⚪",
+    title: sub.name || sub.email || "Unknown sender",
+    time: idx < 2 ? "Today" : "Later",
+  })).concat(
+    [
+      { icon: "⚪", title: "Team standup", time: "2:00 PM" },
+      { icon: "⚪", title: "Quarterly planning prep", time: "Monday" },
+    ].slice(0, Math.max(0, 4 - subscriptions.length))
+  );
+
+  // Generate weekly activity data
+  const weeklyActivityData = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
+    (day, idx) => ({
+      day,
+      // Create varying heights based on email count distribution (deterministic, no Math.random())
+      height: Math.max(10, Math.min(100, ((emailCount || 5) + (idx * Math.floor(emailCount / 7)) + (idx * 3))))
+    })
+  );
+
+  // Show loading state while checking authentication
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#08080c] text-white flex items-center justify-center">
+        <motion.div
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="flex flex-col items-center gap-4"
+        >
+          <div className="w-12 h-12 rounded-lg bg-linear-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
+            <Mail className="w-6 h-6 text-white animate-pulse" />
+          </div>
+          <p className="text-gray-400">Authenticating...</p>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
-    <>
-      {/* Navigation Bar */}
-      <motion.nav
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="fixed top-0 left-0 right-0 z-50 bg-[#08080c]/95 backdrop-blur-md border-b border-white/5"
+    <div className="min-h-screen bg-[#08080c] text-white flex">
+      {/* Sidebar */}
+      <motion.div
+        initial={{ x: -256 }}
+        animate={{ x: 0 }}
+        transition={{ duration: 0.5 }}
+        className="fixed left-0 top-0 h-screen w-64 bg-[#0f0f15] border-r border-white/5 z-40 hidden lg:flex flex-col pt-8 px-6"
       >
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/">
-            <motion.div
-              className="flex items-center gap-2 cursor-pointer"
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 400 }}
-            >
-              <div className="w-9 h-9 bg-linear-to-br from-cyan-400 to-cyan-600 rounded-lg flex items-center justify-center">
-                <Mail className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-semibold text-white">inSight</span>
-            </motion.div>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/">
-              <motion.div
-                className="text-gray-400 hover:text-white transition-colors duration-200 cursor-pointer"
-                whileHover={{ y: -2 }}
-              >
-                Home
-              </motion.div>
-            </Link>
-            <motion.div
-              className="text-cyan-400 font-medium cursor-pointer"
-              whileHover={{ y: -2 }}
-            >
-              Dashboard
-            </motion.div>
-            <Link href="/#features">
-              <motion.div
-                className="text-gray-400 hover:text-white transition-colors duration-200 cursor-pointer"
-                whileHover={{ y: -2 }}
-              >
-                Features
-              </motion.div>
-            </Link>
+        <Link href="/" className="flex items-center gap-2 mb-12">
+          <div className="w-10 h-10 bg-linear-to-br from-cyan-400 to-cyan-600 rounded-lg flex items-center justify-center">
+            <Mail className="w-6 h-6 text-white" />
           </div>
+          <span className="text-xl font-bold text-white">inSight</span>
+        </Link>
 
-          {/* Desktop Actions */}
-          <div className="hidden md:flex items-center gap-3">
-            <Link href="/profile">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors duration-200"
+        <nav className="flex-1 space-y-2">
+          {sidebarLinks.map((link, idx) => {
+            const NavContent = (
+              <motion.div
+                whileHover={{ x: 4 }}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                  link.active
+                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
               >
-                <User className="w-4 h-4 inline mr-2" />
-                Profile
-              </motion.button>
-            </Link>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors duration-200"
-            >
-              <Settings className="w-4 h-4 inline mr-2" />
-              Settings
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-4 py-2 text-sm text-red-400 hover:text-red-300 transition-colors duration-200"
-            >
-              <LogOut className="w-4 h-4 inline mr-2" />
-              Logout
-            </motion.button>
-          </div>
+                <link.icon className="w-5 h-5" />
+                <span className="text-sm font-medium">{link.label}</span>
+              </motion.div>
+            );
 
-          {/* Mobile Menu Button */}
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-gray-400 hover:text-white transition-colors"
-          >
-            {mobileMenuOpen ? (
-              <X className="w-6 h-6" />
+            return link.onClick ? (
+              <button
+                key={idx}
+                onClick={link.onClick}
+                className="block w-full text-left"
+              >
+                {NavContent}
+              </button>
             ) : (
-              <Menu className="w-6 h-6" />
-            )}
-          </motion.button>
-        </div>
+              <Link key={idx} href={link.href || "#"} className="block">
+                {NavContent}
+              </Link>
+            );
+          })}
+        </nav>
 
-        {/* Mobile Menu */}
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={
-            mobileMenuOpen
-              ? { opacity: 1, height: "auto" }
-              : { opacity: 0, height: 0 }
-          }
-          transition={{ duration: 0.3 }}
-          className="md:hidden border-t border-white/5 overflow-hidden"
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 transition-all border border-red-500/20 mb-8"
         >
-          <div className="px-6 py-4 space-y-3">
-            <Link href="/">
-              <motion.div className="px-4 py-2 rounded-lg text-gray-300 hover:bg-white/5 transition-colors cursor-pointer">
-                Home
-              </motion.div>
-            </Link>
-            <motion.div className="px-4 py-2 rounded-lg text-cyan-400 font-medium">
-              Dashboard
-            </motion.div>
-            <Link href="/#features">
-              <motion.div className="px-4 py-2 rounded-lg text-gray-300 hover:bg-white/5 transition-colors cursor-pointer">
-                Features
-              </motion.div>
-            </Link>
-            <hr className="border-white/10 my-3" />
-            <Link href="/profile">
-              <motion.div className="px-4 py-2 rounded-lg text-gray-300 hover:bg-white/5 transition-colors cursor-pointer">
-                <User className="w-4 h-4 inline mr-2" />
-                Profile
-              </motion.div>
-            </Link>
-            <motion.div className="px-4 py-2 rounded-lg text-gray-300 hover:bg-white/5 transition-colors cursor-pointer">
-              <Settings className="w-4 h-4 inline mr-2" />
-              Settings
-            </motion.div>
-            <motion.div className="px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer">
-              <LogOut className="w-4 h-4 inline mr-2" />
-              Logout
-            </motion.div>
-          </div>
-        </motion.div>
-      </motion.nav>
+          <LogOut className="w-5 h-5" />
+          <span className="text-sm font-medium">Logout</span>
+        </motion.button>
+      </motion.div>
 
-      {/* Main Dashboard Content */}
-      <main className="min-h-screen bg-[#08080c] text-white overflow-x-hidden">
-        {/* Dashboard Header */}
-        <motion.section
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
+      {/* Main Content */}
+      <div className="flex-1 lg:ml-64">
+        {/* Top Header */}
+        <motion.header
+          initial={{ y: -100 }}
+          animate={{ y: 0 }}
           transition={{ duration: 0.6 }}
-          className="pt-24 pb-8 px-6 border-b border-white/5"
+          className="fixed top-0 right-0 left-0 lg:left-64 h-20 bg-[#08080c]/95 backdrop-blur-md border-b border-white/5 z-30 px-6 flex items-center justify-between"
         >
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <h1 className="text-4xl font-bold text-white mb-2">
-                  Dashboard
-                </h1>
-                <p className="text-gray-400">
-                  Overview of your email insights and analytics
-                </p>
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-6 py-3 bg-linear-to-r from-cyan-500 to-cyan-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-cyan-500/50 transition-all duration-200"
-              >
-                Export Report
-              </motion.button>
+          <div className="flex items-center gap-4 flex-1">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden p-2 hover:bg-white/5 rounded-lg transition-colors"
+            >
+              {sidebarOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </button>
+
+            <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg flex-1 max-w-md">
+              <Search className="w-4 h-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search emails, briefings..."
+                className="bg-transparent text-sm placeholder-gray-500 focus:outline-none w-full"
+              />
             </div>
           </div>
-        </motion.section>
 
-        {/* Stats Grid */}
-        <motion.section
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="py-8 px-6"
-        >
+          <div className="flex items-center gap-4">
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              className="relative p-2 hover:bg-white/5 rounded-lg transition-colors"
+            >
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </motion.button>
+
+            <Link href="/profile">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-full bg-linear-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
+                  <span className="text-sm font-bold">
+                    {user?.name?.charAt(0).toUpperCase() || "J"}
+                  </span>
+                </div>
+                <span className="hidden sm:inline text-sm font-medium">
+                  {user?.name || "John Doe"}
+                </span>
+              </motion.div>
+            </Link>
+          </div>
+        </motion.header>
+
+        {/* Page Content */}
+        <div className="pt-24 px-6 pb-8">
           <div className="max-w-7xl mx-auto">
-            <div className="grid gap-6 md:grid-cols-3 mb-8">
-              {/* Emails Analyzed */}
-              <motion.div variants={itemVariants} className="group">
-                <div className="relative p-6 rounded-2xl bg-gradient-to-b from-white/[0.05] to-transparent border border-white/10 hover:border-cyan-500/50 transition-all duration-300">
-                  <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="relative">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm text-gray-400">
-                        Emails Analyzed
-                      </span>
-                      <Mail className="w-5 h-5 text-cyan-400" />
-                    </div>
-                    <div className="text-3xl font-bold text-white mb-2">
-                      {emails.length}
-                    </div>
-                    <div className="text-sm text-cyan-400">
-                      ✓ Recently synced
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="mb-8"
+            >
+              <h1 className="text-4xl font-bold mb-2">
+                Good morning, {user?.name?.split(" ")[0] || "John"}
+              </h1>
+              <p className="text-gray-400">
+                Here's your inbox briefing for today. You have{" "}
+                <span className="text-cyan-400 font-semibold">{urgentCount} urgent {urgentCount === 1 ? "item" : "items"}</span> requiring
+                attention.
+              </p>
+            </motion.div>
 
-              {/* Subscriptions Found */}
-              <motion.div variants={itemVariants} className="group">
-                <div className="relative p-6 rounded-2xl bg-gradient-to-b from-white/[0.05] to-transparent border border-white/10 hover:border-cyan-500/50 transition-all duration-300">
-                  <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="relative">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm text-gray-400">
-                        Subscriptions
-                      </span>
-                      <Zap className="w-5 h-5 text-cyan-400" />
-                    </div>
-                    <div className="text-3xl font-bold text-white mb-2">
-                      {subscriptions.length}
-                    </div>
-                    <div className="text-sm text-cyan-400">✓ Detected</div>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {[
+                {
+                  icon: Mail,
+                  label: "Emails Today",
+                  value: emailCount.toString(),
+                  change: emailCount > 0 ? `+${Math.floor(emailCount * 0.25)}` : "0",
+                  color: "cyan",
+                },
+                {
+                  icon: AlertCircle,
+                  label: "Urgent Actions",
+                  value: urgentCount.toString(),
+                  change: urgentCount > 0 ? `+${Math.max(1, Math.floor(urgentCount * 0.5))}` : "0",
+                  color: "red",
+                },
+                {
+                  icon: Clock,
+                  label: "Time Saved",
+                  value: `${totalTimeSaved}min`,
+                  change: totalTimeSaved > 0 ? `+${Math.floor(totalTimeSaved * 0.2)}min` : "0min",
+                  color: "cyan",
+                },
+                {
+                  icon: BarChart3,
+                  label: "Productivity",
+                  value: `${Math.min(productivity, 100)}%`,
+                  change: `+${Math.floor(productivity * 0.05)}%`,
+                  color: "green",
+                },
+              ].map((stat, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-cyan-500/30 transition-all"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-xs text-gray-400 font-medium">
+                      {stat.label}
+                    </span>
+                    <stat.icon className="w-4 h-4 text-cyan-400" />
                   </div>
-                </div>
-              </motion.div>
-
-              {/* Inbox Health */}
-              <motion.div variants={itemVariants} className="group">
-                <div className="relative p-6 rounded-2xl bg-gradient-to-b from-white/[0.05] to-transparent border border-white/10 hover:border-cyan-500/50 transition-all duration-300">
-                  <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="relative">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm text-gray-400">Status</span>
-                      <TrendingUp className="w-5 h-5 text-cyan-400" />
-                    </div>
-                    <div className="text-3xl font-bold text-white mb-2">
-                      {loading ? "Loading..." : "Ready"}
-                    </div>
-                    <div className="text-sm text-cyan-400">
-                      {error ? "⚠ Error loading" : "✓ Connected"}
+                  <div>
+                    <div className="text-2xl font-bold text-white">{stat.value}</div>
+                    <div
+                      className={`text-xs mt-1 ${
+                        stat.color === "red"
+                          ? "text-red-400"
+                          : "text-cyan-400"
+                      }`}
+                    >
+                      {stat.change}
                     </div>
                   </div>
-                </div>
-              </motion.div>
+                </motion.div>
+              ))}
             </div>
 
-            {/* Main Content Grid */}
-            <div className="grid gap-6 lg:grid-cols-3 mb-8">
-              {/* Recent Emails */}
-              <motion.div
-                variants={itemVariants}
-                className="lg:col-span-2 group"
-              >
-                <div className="relative p-6 rounded-2xl bg-gradient-to-b from-white/[0.05] to-transparent border border-white/10 hover:border-cyan-500/50 transition-all duration-300">
-                  <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="relative">
-                    <h2 className="text-xl font-semibold text-white mb-6">
-                      Recent Email Summaries
-                    </h2>
-                    {/* AI Email Summary Feature - Coming Soon
-                                        {loading ? (
-                                            <div className="text-center py-8 text-gray-400">Loading emails...</div>
-                                        ) : error ? (
-                                            <div className="text-center py-8 text-red-400">Error: {error}</div>
-                                        ) : emails.length === 0 ? (
-                                            <div className="text-center py-8 text-gray-400">No emails found. Sync to load emails.</div>
-                                        ) : (
-                                            <div className="space-y-4">
-                                                {emails.slice(0, 3).map((email, idx) => (
-                                                    <div key={idx} className="p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors duration-200 border border-white/5 cursor-pointer group">
-                                                        <div className="flex items-start justify-between gap-3">
-                                                            <div className="flex-1">
-                                                                <p className="text-sm font-medium text-cyan-400 group-hover:text-cyan-300 transition-colors">{email.from || email.snippet?.substring(0, 30) || "Email"}</p>
-                                                                <p className="text-sm text-gray-300 mt-1">{email.aiSummary || email.snippet || "No content"}</p>
-                                                                <p className="text-xs text-gray-500 mt-2">Email ID: {email.id?.substring(0, 12)}...</p>
-                                                            </div>
-                                                            <span className="px-3 py-1 text-xs bg-cyan-500/20 text-cyan-300 rounded-full whitespace-nowrap">
-                                                                {email.aiSummary ? "Summary" : "New"}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                        */}
+            {/* Main Grid */}
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* Left Column */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Your Briefings */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="bg-white/5 border border-white/10 rounded-xl p-6"
+                >
+                  <div className="flex items-center gap-2 mb-6">
+                    <Mail className="w-5 h-5 text-cyan-400" />
+                    <h2 className="text-xl font-semibold">Your Briefings</h2>
+                  </div>
 
-                    {/* Coming Soon */}
-                    <div className="flex flex-col items-center justify-center py-12">
+                  <div className="space-y-3">
+                    {briefings.map((briefing, idx) => (
                       <motion.div
-                        animate={{ scale: [1, 1.05, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="mb-4"
+                        key={idx}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.5 + idx * 0.1 }}
+                        onClick={() =>
+                          setExpandedBriefing(
+                            expandedBriefing === idx ? -1 : idx
+                          )
+                        }
+                        className="p-4 rounded-lg bg-white/5 border border-white/10 hover:border-cyan-500/30 cursor-pointer transition-all"
                       >
-                        <Mail className="w-12 h-12 text-cyan-400" />
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-1">
+                              <div
+                                className={`w-6 h-6 rounded bg-linear-to-br ${briefing.color}`}
+                              ></div>
+                              <h3 className="font-semibold text-white">
+                                {briefing.title}
+                              </h3>
+                              {briefing.tag && (
+                                <span className="px-2 py-0.5 text-xs bg-cyan-500/20 text-cyan-300 rounded">
+                                  {briefing.tag}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              {briefing.date} • {briefing.count} emails
+                              synthesized at {briefing.time}
+                            </p>
+                          </div>
+                          <motion.div
+                            animate={{
+                              rotate:
+                                expandedBriefing === idx ? 180 : 0,
+                            }}
+                            transition={{ duration: 0.3 }}
+                          >
+                            <ChevronDown className="w-5 h-5 text-gray-500" />
+                          </motion.div>
+                        </div>
+
+                        {expandedBriefing === idx && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            transition={{ duration: 0.3 }}
+                            className="mt-4 pt-4 border-t border-white/5 text-sm text-gray-300"
+                          >
+                            <p className="mb-3">
+                              AI-synthesized summary of {briefing.count}{" "}
+                              emails from today, highlighting key action items
+                              and important information.
+                            </p>
+                            <button className="text-cyan-400 hover:text-cyan-300 text-sm font-medium">
+                              View Full Briefing →
+                            </button>
+                          </motion.div>
+                        )}
                       </motion.div>
-                      <p className="text-center text-gray-300 text-lg font-medium mb-2">
-                        AI Email Summaries
-                      </p>
-                      <p className="text-center text-gray-400 text-sm">
-                        Coming soon... Our AI will intelligently summarize your
-                        emails for you
-                      </p>
-                    </div>
+                    ))}
+                  </div>
+                </motion.div>
+
+                {/* Email Categories */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  className="bg-white/5 border border-white/10 rounded-xl p-6"
+                >
+                  <h2 className="text-xl font-semibold mb-6">
+                    Email Categories
+                  </h2>
+                  <div className="space-y-4">
+                    {[
+                      {
+                        label: "Newsletters",
+                        percentage: emailCategories.newsletters,
+                        color: "from-cyan-400 to-cyan-600",
+                      },
+                      {
+                        label: "Work",
+                        percentage: emailCategories.work,
+                        color: "from-orange-400 to-orange-600",
+                      },
+                      {
+                        label: "Personal",
+                        percentage: emailCategories.personal,
+                        color: "from-blue-400 to-blue-600",
+                      },
+                      {
+                        label: "Financial",
+                        percentage: emailCategories.financial,
+                        color: "from-green-400 to-green-600",
+                      },
+                      {
+                        label: "Other",
+                        percentage: emailCategories.other,
+                        color: "from-gray-400 to-gray-600",
+                      },
+                    ].map((cat, idx) => (
+                      <div key={idx}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-300">
+                            {cat.label}
+                          </span>
+                          <span className="text-sm font-medium text-cyan-400">
+                            {cat.percentage}%
+                          </span>
+                        </div>
+                        <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{
+                              width: `${cat.percentage}%`,
+                            }}
+                            transition={{
+                              delay: 0.7 + idx * 0.1,
+                              duration: 0.8,
+                            }}
+                            className={`h-full bg-linear-to-r{cat.color}`}
+                          ></motion.div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+
+                {/* Connected Accounts */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                  className="bg-white/5 border border-white/10 rounded-xl p-6"
+                >
+                  <h2 className="text-xl font-semibold mb-6">
+                    Connected Accounts
+                  </h2>
+                  <div className="space-y-3">
+                    {[
+                      {
+                        name: "Gmail",
+                        email: "john.doe@gmail.com",
+                        time: "Synced 2 min ago",
+                      },
+                      {
+                        name: "Outlook",
+                        email: "j.doe@company.com",
+                        time: "Synced 5 min ago",
+                      },
+                    ].map((account, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10"
+                      >
+                        <div>
+                          <p className="font-medium text-white">
+                            {account.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {account.email}
+                          </p>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          {account.time}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-6">
+                {/* Action Items */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="bg-white/5 border border-white/10 rounded-xl p-6"
+                >
+                  <div className="flex items-center gap-2 mb-6">
+                    <AlertCircle className="w-5 h-5 text-cyan-400" />
+                    <h2 className="text-xl font-semibold">Action Items</h2>
+                  </div>
+
+                  <div className="space-y-3">
+                    {actionItems.map((item, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.6 + idx * 0.1 }}
+                        className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                      >
+                        <span className="text-lg mt-1">{item.icon}</span>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-white">
+                            {item.title}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {item.time}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+
+                {/* Quick Actions */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  className="bg-white/5 border border-white/10 rounded-xl p-6"
+                >
+                  <h3 className="text-lg font-semibold mb-4">
+                    Quick Actions
+                  </h3>
+                  <div className="space-y-2">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="mt-6 w-full py-2 text-sm text-cyan-400 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/10 transition-all duration-200 cursor-pointer"
+                      onClick={handleSync}
+                      disabled={loading}
+                      className="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/20 transition-all disabled:opacity-50"
                     >
-                      View all emails
+                      {loading ? "Syncing..." : "Sync Emails"}
+                    </motion.button>
+                    <Link href="/profile">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-white/5 text-white hover:bg-white/10 border border-white/10 transition-all"
+                      >
+                        View Profile
+                      </motion.button>
+                    </Link>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-white/5 text-white hover:bg-white/10 border border-white/10 transition-all"
+                    >
+                      Generate Report
                     </motion.button>
                   </div>
-                </div>
-              </motion.div>
+                </motion.div>
 
-              {/* Sidebar Tabs */}
-              <motion.div variants={itemVariants} className="group">
-                <div className="relative rounded-2xl bg-gradient-to-b from-white/[0.05] to-transparent border border-white/10 hover:border-cyan-500/50 transition-all duration-300 overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                  {/* Tab Buttons */}
-                  <div className="relative flex border-b border-white/10">
-                    <button
-                      onClick={() => setActiveTab("actions")}
-                      className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                        activeTab === "actions"
-                          ? "text-cyan-400 border-b-2 border-cyan-400"
-                          : "text-gray-400 hover:text-white"
-                      }`}
-                    >
-                      Actions
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("subscriptions")}
-                      className={`flex-1 px-4 py-3 text-sm font-medium transition-colors border-l border-white/10 ${
-                        activeTab === "subscriptions"
-                          ? "text-cyan-400 border-b-2 border-cyan-400"
-                          : "text-gray-400 hover:text-white"
-                      }`}
-                    >
-                      Subscriptions
-                    </button>
-                  </div>
-
-                  {/* Tab Content */}
-                  <div className="relative p-6">
-                    {/* Actions Tab */}
-                    {activeTab === "actions" && (
-                      <div className="space-y-3">
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={handleSync}
-                          disabled={loading}
-                          className="w-full px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-all duration-200 cursor-pointer disabled:opacity-50"
+                {/* Weekly Activity */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                  className="bg-white/5 border border-white/10 rounded-xl p-6"
+                >
+                  <h3 className="text-lg font-semibold mb-4">
+                    Weekly Activity
+                  </h3>
+                  <div className="flex items-end justify-between gap-1 h-24">
+                    {weeklyActivityData.map((data, idx) => (
+                        <div
+                          key={idx}
+                          className="flex flex-col items-center gap-2 flex-1"
                         >
-                          {loading ? "Syncing..." : "Sync Emails"}
-                        </motion.button>
-                        <Link href="/profile">
-                          <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="w-full px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-all duration-200 cursor-pointer"
-                          >
-                            View Profile
-                          </motion.button>
-                        </Link>
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          className="w-full px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-all duration-200 cursor-pointer"
-                        >
-                          View Settings
-                        </motion.button>
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          className="w-full px-4 py-3 rounded-lg bg-linear-to-r from-cyan-500 to-cyan-400 text-black font-semibold text-sm transition-all duration-200 mt-4 cursor-pointer"
-                        >
-                          Generate Report
-                        </motion.button>
-                      </div>
-                    )}
-
-                    {/* Subscriptions Tab */}
-                    {activeTab === "subscriptions" && (
-                      <div>
-                        {subscriptions.length === 0 ? (
-                          <div className="text-center py-8">
-                            <Zap className="w-8 h-8 text-gray-600 mx-auto mb-3" />
-                            <p className="text-gray-400 text-sm">
-                              No subscriptions found
-                            </p>
-                            <p className="text-gray-500 text-xs mt-1">
-                              Sync emails to detect subscriptions
-                            </p>
+                          <div className="w-full bg-white/5 rounded-t-lg overflow-hidden">
+                            <motion.div
+                              initial={{ height: 0 }}
+                              animate={{
+                                height: `${data.height}%`,
+                              }}
+                              transition={{
+                                delay: 0.8 + idx * 0.08,
+                                duration: 0.6,
+                              }}
+                              className="w-full bg-linear-to-t from-cyan-400 to-cyan-600"
+                            ></motion.div>
                           </div>
-                        ) : (
-                          <div className="space-y-2 max-h-96 overflow-y-auto">
-                            {subscriptions.map((sub, idx) => (
-                              <motion.div
-                                key={idx}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: idx * 0.05 }}
-                                className="p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-200 border border-white/5"
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-cyan-400 truncate">
-                                      {sub.name}
-                                    </p>
-                                    <p className="text-xs text-gray-500 truncate">
-                                      {sub.email}
-                                    </p>
-                                  </div>
-                                  <motion.button
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => handleUnsubscribe(sub.email)}
-                                    disabled={unsubscribingEmail === sub.email}
-                                    className="flex-shrink-0 p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-all duration-200 cursor-pointer disabled:opacity-50"
-                                    title="Unsubscribe"
-                                  >
-                                    {unsubscribingEmail === sub.email ? (
-                                      <Loader className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="w-4 h-4" />
-                                    )}
-                                  </motion.button>
-                                </div>
-                              </motion.div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                          <p className="text-xs text-gray-500">{data.day}</p>
+                        </div>
+                      )
                     )}
                   </div>
-                </div>
-              </motion.div>
+                </motion.div>
+              </div>
             </div>
+          </div>
+        </div>
 
-            {/* Insights Section */}
-            <motion.div variants={itemVariants} className="group">
-              <div className="relative p-6 rounded-2xl bg-gradient-to-b from-white/[0.05] to-transparent border border-white/10 hover:border-cyan-500/50 transition-all duration-300">
-                <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <div className="relative">
-                  <div className="flex items-center gap-3 mb-6">
-                    <AlertCircle className="w-5 h-5 text-cyan-400" />
-                    <h2 className="text-xl font-semibold text-white">
-                      Insights & Recommendations
-                    </h2>
+        {/* Subscriptions Modal/Panel */}
+        {showSubscriptions && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 lg:p-0"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#08080c] border border-white/10 rounded-xl w-full lg:w-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="sticky top-0 bg-[#0f0f15] border-b border-white/10 p-6 flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Manage Subscriptions</h2>
+                <button
+                  onClick={() => setShowSubscriptions(false)}
+                  className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6">
+                {subscriptions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Mail className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                    <p className="text-gray-400">No subscriptions yet</p>
                   </div>
+                ) : (
                   <div className="space-y-3">
-                    <p className="text-sm text-gray-300">
-                      💡{" "}
-                      <span className="text-cyan-400">
-                        Optimize subscriptions:
-                      </span>{" "}
-                      You have 12 inactive newsletters that could be
-                      unsubscribed to reduce clutter.
-                    </p>
-                    <p className="text-sm text-gray-300">
-                      📊{" "}
-                      <span className="text-cyan-400">Peak email hours:</span>{" "}
-                      Most of your emails arrive between 9 AM - 12 PM. Plan your
-                      review time accordingly.
-                    </p>
-                    <p className="text-sm text-gray-300">
-                      ⚡ <span className="text-cyan-400">Smart summary:</span>{" "}
-                      Enable AI summaries to save 2+ hours per week on email
-                      reading.
-                    </p>
+                    {subscriptions.map((sub, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className="p-4 rounded-lg bg-white/5 border border-white/10 hover:border-cyan-500/30 transition-all flex items-center justify-between"
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium text-white">
+                            {sub.name || sub.email || "Unknown"}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {sub.email}
+                          </p>
+                          {sub.unsubscribeUrl && (
+                            <p className="text-xs text-gray-600 mt-2">
+                              Click to unsubscribe
+                            </p>
+                          )}
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleUnsubscribe(sub.email)}
+                          disabled={unsubscribingEmail === sub.email}
+                          className="ml-4 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all disabled:opacity-50 flex items-center gap-2 text-sm"
+                        >
+                          {unsubscribingEmail === sub.email ? (
+                            <>
+                              <Loader className="w-3 h-3 animate-spin" />
+                              Unsubscribing...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="w-3 h-3" />
+                              Unsubscribe
+                            </>
+                          )}
+                        </motion.button>
+                      </motion.div>
+                    ))}
                   </div>
-                </div>
+                )}
+
+                {error && (
+                  <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                    {error}
+                  </div>
+                )}
               </div>
             </motion.div>
-          </div>
-        </motion.section>
-      </main>
-      <Footer />
-    </>
+          </motion.div>
+        )}
+      </div>
+    </div>
   );
 }
