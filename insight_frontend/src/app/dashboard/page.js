@@ -524,7 +524,10 @@ export default function DashboardPage() {
                               emails from today, highlighting key action items
                               and important information.
                             </p>
-                            <button className="text-cyan-400 hover:text-cyan-300 text-sm font-medium">
+                            <button 
+                              onClick={() => alert(`Briefing ${idx + 1} Summary:\n\n${generateMockSummary(idx)}`)}
+                              className="text-cyan-400 hover:text-cyan-300 text-sm font-medium"
+                            >
                               View Full Briefing →
                             </button>
                           </motion.div>
@@ -591,7 +594,7 @@ export default function DashboardPage() {
                               delay: 0.7 + idx * 0.1,
                               duration: 0.8,
                             }}
-                            className={`h-full bg-linear-to-r{cat.color}`}
+                            className={`h-full bg-linear-to-r ${cat.color}`}
                           ></motion.div>
                         </div>
                       </div>
@@ -690,21 +693,21 @@ export default function DashboardPage() {
                   <h3 className="text-lg font-semibold mb-4">
                     Quick Actions
                   </h3>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={handleSync}
                       disabled={loading}
-                      className="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/20 transition-all disabled:opacity-50"
+                      className="w-full px-4 py-3 text-sm font-medium rounded-lg bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/20 transition-all disabled:opacity-50"
                     >
                       {loading ? "Syncing..." : "Sync Emails"}
                     </motion.button>
-                    <Link href="/profile">
+                    <Link href="/profile" className="block">
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-white/5 text-white hover:bg-white/10 border border-white/10 transition-all"
+                        className="w-full px-4 py-3 text-sm font-medium rounded-lg bg-white/5 text-white hover:bg-white/10 border border-white/10 transition-all"
                       >
                         View Profile
                       </motion.button>
@@ -712,7 +715,7 @@ export default function DashboardPage() {
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-white/5 text-white hover:bg-white/10 border border-white/10 transition-all"
+                      className="w-full px-4 py-3 text-sm font-medium rounded-lg bg-white/5 text-white hover:bg-white/10 border border-white/10 transition-all"
                     >
                       Generate Report
                     </motion.button>
