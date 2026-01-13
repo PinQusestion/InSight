@@ -616,12 +616,12 @@ export default function DashboardPage() {
                     {[
                       {
                         name: "Gmail",
-                        email: "john.doe@gmail.com",
+                        email: user?.email || "Not connected",
                         time: "Synced 2 min ago",
                       },
                       {
                         name: "Outlook",
-                        email: "j.doe@company.com",
+                        email: user?.secondaryEmail || "Not connected",
                         time: "Synced 5 min ago",
                       },
                     ].map((account, idx) => (
