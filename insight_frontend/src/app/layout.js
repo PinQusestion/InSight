@@ -18,10 +18,11 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#08080c] text-white overflow-x-hidden`}
         style={{ margin: 0, padding: 0 }}
+        suppressHydrationWarning
       >
         {children}
       </body>
